@@ -124,6 +124,9 @@ study = StudyDefinition(
         },
     ),
 
+    ################################################
+    ###### PRACTICE AND PATIENT ADDRESS VARIABLES ##
+    ################################################
     # practice pseudo id
     practice_id=patients.registered_practice_as_of(
         campaign_start,  # day before vaccine campaign start
@@ -339,5 +342,128 @@ study = StudyDefinition(
         find_last_match_in_period=True,
         date_format="YYYY-MM-DD",
         on_or_after="covid_vacc_date",
+    ),
+
+    ############################################################
+    ######### CLINICAL CO-MORBIDITIES ##########################
+    ############################################################
+    #### NOTES: PLEASE PAY CLOSE ATTENTION TO THE DATES USED. ##
+    ### THESE CODELISTS ARE AVAILABLE ON CODELISTS.OPENSAFELY.ORG
+    #### AND CAN BE UPDATED. PLEASE REVIEW AND CHECK YOU ARE HAPPY
+    #### WITH THE CODELIST USED #################################
+
+    # https://github.com/opensafely/vaccine-eligibility/blob/master/analysis/study_definition.py
+    chronic_cardiac_disease=patients.with_these_clinical_events(
+        chronic_cardiac_disease_codes,
+        on_or_before=campaign_start,
+        returning="binary_flag",
+        return_expectations={"incidence": 0.01},
+    ),
+    current_copd=patients.with_these_clinical_events(
+        current_copd_codes,
+        on_or_before=campaign_start,
+        returning="binary_flag",
+        return_expectations={"incidence": 0.01, },
+    ),
+    # on a dmard - indicative of immunosuppression
+    dmards=patients.with_these_medications(
+        dmards_codes,
+        on_or_before=campaign_start,
+        returning="binary_flag",
+        return_expectations={"incidence": 0.01, },
+    ),
+    # dementia
+    dementia=patients.with_these_clinical_events(
+        dementia_codes,
+        on_or_before=campaign_start,
+        returning="binary_flag",
+        return_expectations={"incidence": 0.01, },
+    ),
+    dialysis=patients.with_these_clinical_events(
+        dialysis_codes,
+        on_or_before=campaign_start,
+        returning="binary_flag",
+        return_expectations={"incidence": 0.01, },
+    ),
+    solid_organ_transplantation=patients.with_these_clinical_events(
+        solid_organ_transplantation_codes,
+        on_or_before=campaign_start,
+        returning="binary_flag",
+        return_expectations={"incidence": 0.01, },
+    ),
+    chemo_or_radio=patients.with_these_clinical_events(
+        chemotherapy_or_radiotherapy_codes,
+        on_or_before=campaign_start,
+        returning="binary_flag",
+        return_expectations={"incidence": 0.01, },
+    ),
+    intel_dis_incl_downs_syndrome=patients.with_these_clinical_events(
+        intellectual_disability_including_downs_syndrome_codes,
+        on_or_before=campaign_start,
+        returning="binary_flag",
+        return_expectations={"incidence": 0.01, },
+    ),
+    lung_cancer=patients.with_these_clinical_events(
+        lung_cancer_codes,
+        on_or_before=campaign_start,
+        returning="binary_flag",
+        return_expectations={"incidence": 0.01, },
+    ),
+    cancer_excl_lung_and_haem=patients.with_these_clinical_events(
+        cancer_excluding_lung_and_haematological_codes,
+        on_or_before=campaign_start,
+        returning="binary_flag",
+        return_expectations={"incidence": 0.01, },
+    ),
+    haematological_cancer=patients.with_these_clinical_events(
+        haematological_cancer_codes,
+        on_or_before=campaign_start,
+        returning="binary_flag",
+        return_expectations={"incidence": 0.01, },
+    ),
+    bone_marrow_transplant=patients.with_these_clinical_events(
+        bone_marrow_transplant_codes,
+        between=["2020-07-01", campaign_start],
+        returning="binary_flag",
+        return_expectations={"incidence": 0.01, },
+    ),
+    cystic_fibrosis=patients.with_these_clinical_events(
+        cystic_fibrosis_codes,
+        on_or_before=campaign_start,
+        returning="binary_flag",
+        return_expectations={"incidence": 0.01, },
+    ),
+    sickle_cell_disease=patients.with_these_clinical_events(
+        sickle_cell_disease_codes,
+        on_or_before=campaign_start,
+        returning="binary_flag",
+        return_expectations={"incidence": 0.01, },
+    ),
+    permanant_immunosuppression=patients.with_these_clinical_events(
+        permanent_immunosuppression_codes,
+        on_or_before=campaign_start,
+        returning="binary_flag",
+        return_expectations={"incidence": 0.01, },
+    ),
+    temporary_immunosuppression=patients.with_these_clinical_events(
+        temporary_immunosuppression_codes,
+        on_or_before=campaign_start,
+        returning="binary_flag",
+        return_expectations={"incidence": 0.01, },
+    ),
+    #
+    psychosis_schiz_bipolar=patients.with_these_clinical_events(
+        psychosis_schizophrenia_bipolar_affective_disease_codes,
+        on_or_before=campaign_start,
+        returning="binary_flag",
+        return_expectations={"incidence": 0.01, },
+    ),
+
+    # https://github.com/opensafely/codelist-development/issues/4
+    asplenia=patients.with_these_clinical_events(
+        asplenia_codes,
+        on_or_before=campaign_start,
+        returning="binary_flag",
+        return_expectations={"incidence": 0.01, },
     ),
 )
