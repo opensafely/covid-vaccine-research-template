@@ -58,13 +58,6 @@ sickle_cell_disease_codes = codelist_from_csv(
     "codelists/opensafely-sickle-cell-disease.csv", system="ctv3", column="CTV3ID",
 )
 
-ssri_codes = codelist_from_csv(
-    "codelists/opensafely-selective-serotonin-reuptake-inhibitors-dmd.csv",
-    system="snomed",
-    column="dmd_id",
-)
-
-
 permanent_immunosuppression_codes = codelist_from_csv(
     "codelists/opensafely-permanent-immunosuppression.csv",
     system="ctv3",
