@@ -292,7 +292,7 @@ study = StudyDefinition(
     ),
     # COVID VACCINATION - Oxford AZ
     covid_vacc_oxford_date=patients.with_tpp_vaccination_record(
-        product_name_matches="Talent 0.5ml dose solution for injection (Secretary of State for Health)",
+        product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
         on_or_after="2020-12-01",  # check all december to date
         find_first_match_in_period=True,
         returning="date",
