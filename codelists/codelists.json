@@ -1,11 +1,5 @@
 {
   "files": {
-    "opensafely-adrenaline-pens.csv": {
-      "id": "opensafely/adrenaline-pens/1964af81",
-      "url": "https://codelists.opensafely.org/codelist/opensafely/adrenaline-pens/1964af81/",
-      "downloaded_at": "2021-01-18 11:45:37.386521Z",
-      "sha": "3f430b2ce844cc061364ffc29c2058cb83189b68"
-    },
     "opensafely-asplenia.csv": {
       "id": "opensafely/asplenia/2020-06-02",
       "url": "https://codelists.opensafely.org/codelist/opensafely/asplenia/2020-06-02/",
@@ -41,6 +35,12 @@
       "url": "https://codelists.opensafely.org/codelist/opensafely/chemotherapy-or-radiotherapy/2020-04-15/",
       "downloaded_at": "2021-01-18 11:45:39.601151Z",
       "sha": "cd33b4059bb1f9afcf4d04ff46bf72f088548750"
+    },
+    "opensafely-covid-identification.csv": {
+      "id": "opensafely/covid-identification/2020-06-03",
+      "url": "https://codelists.opensafely.org/codelist/opensafely/covid-identification/2020-06-03/",
+      "downloaded_at": "2021-01-20 14:02:25.131566Z",
+      "sha": "124db6929439379b7dacd55ba26ae4f2ed9370bc"
     },
     "opensafely-covid-identification-in-primary-care-probable-covid-positive-test.csv": {
       "id": "opensafely/covid-identification-in-primary-care-probable-covid-positive-test/2020-07-16",
