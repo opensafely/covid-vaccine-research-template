@@ -322,6 +322,7 @@ study = StudyDefinition(
                 "latest": latest_date,
             }
         },
+    ),
 
     # COVID VACCINATION - Oxford AZ
     covid_vacc_oxford_first_dose_date=patients.with_tpp_vaccination_record(
@@ -351,6 +352,7 @@ study = StudyDefinition(
                 "latest": latest_date,
             }
         },
+    ),
 
     ################################################
     ############ COVID CASES #########################
