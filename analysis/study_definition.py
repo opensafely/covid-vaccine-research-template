@@ -30,17 +30,10 @@ study = StudyDefinition(
         """
         registered = 1
         AND
-        has_follow_up
-        AND
         (age >= 18 AND age <= 110)
         AND
         NOT has_died
         """
-    ),
-    has_follow_up=patients.registered_with_one_practice_between(
-        start_date="2019-12-01",
-        end_date=campaign_start,
-        return_expectations={"incidence": 0.95},
     ),
     registered=patients.registered_as_of(
         campaign_start,  # day before vaccination campaign starts - discuss with team if this should be "today"
@@ -70,16 +63,42 @@ study = StudyDefinition(
     ),
 
     # https://github.com/opensafely/risk-factors-research/issues/51
-    bmi=patients.most_recent_bmi(
-        on_or_after="2010-02-01",
-        minimum_age_at_measurement=16,
-        include_measurement_date=True,
-        include_month=True,
+    bmi=patients.categorised_as(
+        {
+            "Not obese": "DEFAULT",
+            "Obese I (30-34.9)": """ bmi_value >= 30 AND bmi_value < 35""",
+            "Obese II (35-39.9)": """ bmi_value >= 35 AND bmi_value < 40""",
+            "Obese III (40+)": """ bmi_value >= 40 AND bmi_value < 100""", 
+            # set maximum to avoid any impossibly extreme values being classified as obese
+        },
+        bmi_value=patients.most_recent_bmi(
+            on_or_after="2015-12-01",
+            minimum_age_at_measurement=16
+            ),
         return_expectations={
-            "incidence": 0.6,
-            "float": {"distribution": "normal", "mean": 35, "stddev": 10},
+            "rate": "universal",
+            "category": {
+                "ratios": {
+                    "Not obese": 0.7,
+                    "Obese I (30-34.9)": 0.1,
+                    "Obese II (35-39.9)": 0.1,
+                    "Obese III (40+)": 0.1,
+                }
+            },
         },
     ),
+
+    
+    has_follow_up_previous_year=patients.registered_with_one_practice_between(
+        start_date="2019-12-07",
+        end_date=campaign_start,
+        return_expectations={"incidence": 0.95},
+        ),
+
+    registered_at_latest_date=patients.registered_as_of(
+        reference_date=latest_date,
+        return_expectations={"incidence": 0.95},
+        ),
 
     # ETHNICITY IN 16 CATEGORIES
     ethnicity_16=patients.with_these_clinical_events(
@@ -277,7 +296,7 @@ study = StudyDefinition(
         },
     ),
     # COVID VACCINATION - Pfizer BioNTech
-    covid_vacc_pfizer_date=patients.with_tpp_vaccination_record(
+    covid_vacc_pfizer_first_dose_date=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vac BNT162b2 30mcg/0.3ml conc for susp for inj multidose vials (Pfizer-BioNTech)",
         on_or_after="2020-12-01",  # check all december to date
         find_first_match_in_period=True,
@@ -290,8 +309,23 @@ study = StudyDefinition(
             }
         },
     ),
+
+    # SECOND DOSE COVID VACCINATION
+    covid_vacc_pfizer_second_dose_date=patients.with_tpp_vaccination_record(
+        product_name_matches="COVID-19 mRNA Vac BNT162b2 30mcg/0.3ml conc for susp for inj multidose vials (Pfizer-BioNTech)",
+        on_or_after="covid_vacc_pfizer_first_dose_date + 19 days",
+        find_first_match_in_period=True,
+        returning="date",
+        date_format="YYYY-MM-DD",
+        return_expectations={
+            "date": {
+                "earliest": "2020-12-29",  # first reported second dose administered on the 29/12
+                "latest": latest_date,
+            }
+        },
+
     # COVID VACCINATION - Oxford AZ
-    covid_vacc_oxford_date=patients.with_tpp_vaccination_record(
+    covid_vacc_oxford_first_dose_date=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
         on_or_after="2020-12-01",  # check all december to date
         find_first_match_in_period=True,
@@ -304,6 +338,20 @@ study = StudyDefinition(
             }
         },
     ),
+
+    # SECOND DOSE COVID VACCINATION
+    covid_vacc_oxford_second_dose_date=patients.with_tpp_vaccination_record(
+        product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
+        on_or_after="covid_vacc_oxford_first_dose_date + 19 days",
+        find_first_match_in_period=True,
+        returning="date",
+        date_format="YYYY-MM-DD",
+        return_expectations={
+            "date": {
+                "earliest": "2020-12-29",  
+                "latest": latest_date,
+            }
+        },
 
     ################################################
     ############ COVID CASES #########################
