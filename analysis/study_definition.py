@@ -68,7 +68,7 @@ study = StudyDefinition(
             "Not obese": "DEFAULT",
             "Obese I (30-34.9)": """ bmi_value >= 30 AND bmi_value < 35""",
             "Obese II (35-39.9)": """ bmi_value >= 35 AND bmi_value < 40""",
-            "Obese III (40+)": """ bmi_value >= 40 AND bmi_value < 100""", 
+            "Obese III (40+)": """ bmi_value >= 40 AND bmi_value < 100""",
             # set maximum to avoid any impossibly extreme values being classified as obese
         },
         bmi_value=patients.most_recent_bmi(
@@ -88,7 +88,7 @@ study = StudyDefinition(
         },
     ),
 
-    
+
     has_follow_up_previous_year=patients.registered_with_one_practice_between(
         start_date="2019-12-07",
         end_date=campaign_start,
@@ -254,9 +254,7 @@ study = StudyDefinition(
 
     # simple care home flag
     care_home=patients.satisfying(
-        {
-            """care_home_type"""
-        },
+        """care_home_type""",
         return_expectations={
             "rate": "universal",
             "category": {"ratios": {1: 0.15, 0: 0.85, }},
@@ -406,6 +404,11 @@ study = StudyDefinition(
         find_last_match_in_period=True,
         date_format="YYYY-MM-DD",
         on_or_after="covid_vacc_date",
+        return_expectations={
+            "date": {"earliest": "2021-05-01", "latest" : "2021-05-30"},
+            "rate": "uniform",
+            "incidence": 0.05,
+        },
     ),
     # POST VACCINE COVID-RELATED HOSPITAL ADMISSION
     post_vaccine_admitted_date=patients.admitted_to_hospital(
