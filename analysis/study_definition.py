@@ -253,14 +253,13 @@ study = StudyDefinition(
     ),
 
     # simple care home flag
-    care_home=patients.categorised_as(
+    care_home=patients.satisfying(
         {
-            1: """care_home_type""",
-            0: "DEFAULT",
+            """care_home_type"""
         },
         return_expectations={
             "rate": "universal",
-            "category": {"ratios": {1: 0.15, 0: 0.85, }, },
+            "category": {"ratios": {1: 0.15, 0: 0.85, }},
         },
     ),
 
