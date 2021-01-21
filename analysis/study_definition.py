@@ -10,7 +10,7 @@ from cohortextractor import (
 
 # Important Dates
 campaign_start = "2020-12-07" # change this if you need to
-latest_date = "2021-01-13" # for expectations only atm
+latest_date = "2021-01-13" 
 
 # Import Codelists
 from codelists import *
@@ -28,7 +28,7 @@ study = StudyDefinition(
     # This line defines the study population
     population=patients.satisfying(
         """
-        registered = 1
+        registered
         AND
         (age >= 18 AND age <= 110)
         AND
@@ -278,7 +278,7 @@ study = StudyDefinition(
             }
         },
     ),
-    # SECOND DOSE COVID VACCINATION
+    # SECOND DOSE COVID VACCINATION - any type, at least 19 d since first recorded dose
     covid_vacc_second_dose_date=patients.with_tpp_vaccination_record(
         target_disease_matches="SARS-2 CORONAVIRUS",
         on_or_after="covid_vacc_date + 19 days",
@@ -292,7 +292,8 @@ study = StudyDefinition(
             }
         },
     ),
-    # COVID VACCINATION - Pfizer BioNTech
+    # COVID VACCINATION TYPE = Pfizer BioNTech - first record of a pfizer vaccine 
+       # NB *** may be patient's first COVID vaccine dose or their second if mixed types are given ***
     covid_vacc_pfizer_first_dose_date=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vac BNT162b2 30mcg/0.3ml conc for susp for inj multidose vials (Pfizer-BioNTech)",
         on_or_after="2020-12-01",  # check all december to date
@@ -307,7 +308,8 @@ study = StudyDefinition(
         },
     ),
 
-    # SECOND DOSE COVID VACCINATION
+    # SECOND DOSE COVID VACCINATION, TYPE = Pfizer (within at least 19 d of patient's first dose of same vaccine type)
+        # NB will not pick up second doses in patients given mixed types
     covid_vacc_pfizer_second_dose_date=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vac BNT162b2 30mcg/0.3ml conc for susp for inj multidose vials (Pfizer-BioNTech)",
         on_or_after="covid_vacc_pfizer_first_dose_date + 19 days",
@@ -322,7 +324,8 @@ study = StudyDefinition(
         },
     ),
 
-    # COVID VACCINATION - Oxford AZ
+    # COVID VACCINATION TYPE = Oxford AZ - first record of an Oxford AZ vaccine 
+        # NB *** may be patient's first COVID vaccine dose or their second if mixed types are given ***
     covid_vacc_oxford_first_dose_date=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
         on_or_after="2020-12-01",  # check all december to date
@@ -337,7 +340,8 @@ study = StudyDefinition(
         },
     ),
 
-    # SECOND DOSE COVID VACCINATION
+    # SECOND DOSE COVID VACCINATION, TYPE = Oxford AZ (within at least 19 d of patient's first dose of same vaccine type)
+        # NB will not pick up second doses in patients given mixed types
     covid_vacc_oxford_second_dose_date=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
         on_or_after="covid_vacc_oxford_first_dose_date + 19 days",
@@ -346,7 +350,7 @@ study = StudyDefinition(
         date_format="YYYY-MM-DD",
         return_expectations={
             "date": {
-                "earliest": "2020-12-29",  
+                "earliest": "2021-01-19",  
                 "latest": latest_date,
             }
         },
