@@ -9,8 +9,8 @@ from cohortextractor import (
 )
 
 # Important Dates
-campaign_start = "2020-12-07" # change this if you need to
-latest_date = "2021-01-13" 
+campaign_start = "2020-12-07" # the day before vaccines were rolled-out in England
+latest_date = "2021-01-13" # change this when more data become available - see https://github.com/opensafely/database-notebooks/blob/master/notebooks/database-builds.ipynb
 
 # Import Codelists
 from codelists import *
@@ -24,26 +24,35 @@ study = StudyDefinition(
         "rate": "uniform",
         "incidence": 0.2,
     },
+        
+    # set the index date to be the campaign start -- change if necessasry
+    index_date = campaign_start, 
 
     # This line defines the study population
+    # change this to extract data for a different set of patients
     population=patients.satisfying(
         """
         registered
         AND
-        (age >= 18 AND age <= 110)
+        (age >= 80 AND age < 110)
+        AND
+        (sex = "M" OR sex = "F")
         AND
         NOT has_died
-        """
+        AND 
+        NOT care_home
+        AND
+        NOT prior_positive_test_date
+        """,
+        registered=patients.registered_as_of(
+            "index_date",
+        ),
+        has_died=patients.died_from_any_cause(
+            on_or_before="index_date",
+            returning="binary_flag",
+        ),
     ),
-    registered=patients.registered_as_of(
-        campaign_start,  # day before vaccination campaign starts - discuss with team if this should be "today"
-        return_expectations={"incidence": 0.98},
-    ),
-    has_died=patients.died_from_any_cause(
-        on_or_before=campaign_start,
-        returning="binary_flag",
-        return_expectations={"incidence": 0.05},
-    ),
+
 
     # https://github.com/opensafely/risk-factors-research/issues/49
     age=patients.age_as_of(
@@ -88,17 +97,12 @@ study = StudyDefinition(
         },
     ),
 
-
+    # was the patient registered at the same practice throught the previous year?
     has_follow_up_previous_year=patients.registered_with_one_practice_between(
-        start_date="2019-12-07",
-        end_date=campaign_start,
+        start_date="index_date - 1 year",
+        end_date="index_date",
         return_expectations={"incidence": 0.95},
-        ),
-
-    registered_at_latest_date=patients.registered_as_of(
-        reference_date=latest_date,
-        return_expectations={"incidence": 0.95},
-        ),
+    ),
 
     # ETHNICITY IN 16 CATEGORIES
     ethnicity_16=patients.with_these_clinical_events(
@@ -148,7 +152,7 @@ study = StudyDefinition(
     ################################################
     # practice pseudo id
     practice_id=patients.registered_practice_as_of(
-        campaign_start,  # day before vaccine campaign start
+        "index_date",  
         returning="pseudo_id",
         return_expectations={
             "int": {"distribution": "normal", "mean": 1000, "stddev": 100},
@@ -158,7 +162,7 @@ study = StudyDefinition(
 
     # stp is an NHS administration region based on geography
     stp=patients.registered_practice_as_of(
-        campaign_start,
+        "index_date",
         returning="stp_code",
         return_expectations={
             "rate": "universal",
@@ -180,7 +184,7 @@ study = StudyDefinition(
     ),
     # NHS administrative region
     region=patients.registered_practice_as_of(
-        campaign_start,
+        "index_date",
         returning="nuts1_region_name",
         return_expectations={
             "rate": "universal",
@@ -210,7 +214,7 @@ study = StudyDefinition(
             "5": """index_of_multiple_deprivation >= 32844*4/5 AND index_of_multiple_deprivation < 32844""",
         },
         index_of_multiple_deprivation=patients.address_as_of(
-            campaign_start,
+            "index_date",
             returning="index_of_multiple_deprivation",
             round_to_nearest=100,
         ),
@@ -231,24 +235,24 @@ study = StudyDefinition(
 
     # CAREHOME STATUS
     care_home_type=patients.care_home_status_as_of(
-        campaign_start,
+        "index_date",
         categorised_as={
-            "PC": """
+            "Carehome": """
               IsPotentialCareHome
               AND LocationDoesNotRequireNursing='Y'
               AND LocationRequiresNursing='N'
             """,
-            "PN": """
+            "Nursinghome": """
               IsPotentialCareHome
               AND LocationDoesNotRequireNursing='N'
               AND LocationRequiresNursing='Y'
             """,
-            "PS": "IsPotentialCareHome",
-            "": "DEFAULT",  # use empty string
+            "Mixed": "IsPotentialCareHome",
+            "": "DEFAULT",  # use empty string to define non-carehome
         },
         return_expectations={
             "rate": "universal",
-            "category": {"ratios": {"PC": 0.05, "PN": 0.05, "PS": 0.05, "": 0.85, }, },
+            "category": {"ratios": {"Carehome": 0.05, "Nursinghome": 0.05, "Mixed": 0.05, "": 0.85, }, },
         },
     ),
 
@@ -262,133 +266,244 @@ study = StudyDefinition(
     ),
 
     ###############################################################################
-    # COVID VACCINATION
+    # COVID VACCINATION DATES
     ###############################################################################
-    # any COVID vaccination (first dose)
-    covid_vacc_date=patients.with_tpp_vaccination_record(
+    # FIRST DOSE COVID VACCINATION - any type
+    covid_vax_1_date=patients.with_tpp_vaccination_record(
         target_disease_matches="SARS-2 CORONAVIRUS",
-        on_or_after="2020-12-01",  # check all december to date
+        on_or_after="index_date",  # check all december to date
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD",
         return_expectations={
             "date": {
                 "earliest": "2020-12-08",  # first vaccine administered on the 8/12
+                "latest": "2021-01-01",
+            }
+        },
+    ),
+    # SECOND DOSE COVID VACCINATION - any type
+    covid_vax_2_date=patients.with_tpp_vaccination_record(
+        target_disease_matches="SARS-2 CORONAVIRUS",
+        on_or_after="covid_vax_1_date + 15 days",
+        find_first_match_in_period=True,
+        returning="date",
+        date_format="YYYY-MM-DD",
+        return_expectations={
+            "date": {
+                "earliest": "2020-12-29",  # first reported second dose administered on the 29/12
                 "latest": "2021-01-31",
             }
         },
     ),
-    # SECOND DOSE COVID VACCINATION - any type, at least 19 d since first recorded dose
-    covid_vacc_second_dose_date=patients.with_tpp_vaccination_record(
+    # THIRD DOSE COVID VACCINATION - any type
+    covid_vax_3_date=patients.with_tpp_vaccination_record(
         target_disease_matches="SARS-2 CORONAVIRUS",
-        on_or_after="covid_vacc_date + 19 days",
+        on_or_after="covid_vax_2_date + 1 day",
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD",
         return_expectations={
             "date": {
                 "earliest": "2020-12-29",  # first reported second dose administered on the 29/12
-                "latest": latest_date,
+                "latest": "2021-01-31",
             }
         },
     ),
+    # 4th DOSE COVID VACCINATION - any type
+    covid_vax_4_date=patients.with_tpp_vaccination_record(
+        target_disease_matches="SARS-2 CORONAVIRUS",
+        on_or_after="covid_vax_3_date + 1 day",
+        find_first_match_in_period=True,
+        returning="date",
+        date_format="YYYY-MM-DD",
+        return_expectations={
+            "date": {
+                "earliest": "2020-12-29",  # first reported second dose administered on the 29/12
+                "latest": "2021-01-31",
+            }
+        },
+    ),
+    
+    
+    
     # COVID VACCINATION TYPE = Pfizer BioNTech - first record of a pfizer vaccine 
        # NB *** may be patient's first COVID vaccine dose or their second if mixed types are given ***
-    covid_vacc_pfizer_first_dose_date=patients.with_tpp_vaccination_record(
+    covid_vax_pfizer_1_date=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vac BNT162b2 30mcg/0.3ml conc for susp for inj multidose vials (Pfizer-BioNTech)",
-        on_or_after="2020-12-01",  # check all december to date
+        on_or_after="index_date",  # check all december to date
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD",
         return_expectations={
             "date": {
                 "earliest": "2020-12-08",  # first vaccine administered on the 8/12
-                "latest": latest_date,
+                "latest": "2021-01-01",
             }
         },
     ),
 
-    # SECOND DOSE COVID VACCINATION, TYPE = Pfizer (within at least 19 d of patient's first dose of same vaccine type)
-        # NB will not pick up second doses in patients given mixed types
-    covid_vacc_pfizer_second_dose_date=patients.with_tpp_vaccination_record(
+    # SECOND DOSE COVID VACCINATION, TYPE = Pfizer (after patient's first dose of same vaccine type)
+    covid_vax_pfizer_2_date=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vac BNT162b2 30mcg/0.3ml conc for susp for inj multidose vials (Pfizer-BioNTech)",
-        on_or_after="covid_vacc_pfizer_first_dose_date + 19 days",
+        on_or_after="covid_vax_pfizer_1_date + 15 days",
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD",
         return_expectations={
             "date": {
                 "earliest": "2020-12-29",  # first reported second dose administered on the 29/12
-                "latest": latest_date,
+                "latest": "2021-02-01",
             }
         },
     ),
+    
+    # THIRD DOSE COVID VACCINATION, TYPE = Pfizer (after patient's second dose of same vaccine type)
+    covid_vax_pfizer_3_date=patients.with_tpp_vaccination_record(
+        product_name_matches="COVID-19 mRNA Vac BNT162b2 30mcg/0.3ml conc for susp for inj multidose vials (Pfizer-BioNTech)",
+        on_or_after="covid_vax_pfizer_2_date + 1 day",
+        find_first_match_in_period=True,
+        returning="date",
+        date_format="YYYY-MM-DD",
+        return_expectations={
+            "date": {
+                "earliest": "2020-12-29",  # first reported second dose administered on the 29/12
+                "latest": "2021-02-01",
+            }
+        },
+    ),
+    
+    # 4th DOSE COVID VACCINATION, TYPE = Pfizer (after patient's third dose of same vaccine type)
+    covid_vax_pfizer_4_date=patients.with_tpp_vaccination_record(
+        product_name_matches="COVID-19 mRNA Vac BNT162b2 30mcg/0.3ml conc for susp for inj multidose vials (Pfizer-BioNTech)",
+        on_or_after="covid_vax_pfizer_3_date + 1 day",
+        find_first_match_in_period=True,
+        returning="date",
+        date_format="YYYY-MM-DD",
+        return_expectations={
+            "date": {
+                "earliest": "2020-12-29",  # first reported second dose administered on the 29/12
+                "latest": "2021-02-01",
+            }
+        },
+    ),
+
+
 
     # COVID VACCINATION TYPE = Oxford AZ - first record of an Oxford AZ vaccine 
         # NB *** may be patient's first COVID vaccine dose or their second if mixed types are given ***
-    covid_vacc_oxford_first_dose_date=patients.with_tpp_vaccination_record(
+    covid_vax_az_1_date=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
-        on_or_after="2020-12-01",  # check all december to date
+        on_or_after="index_date",  # check all december to date
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD",
         return_expectations={
             "date": {
-                "earliest": "2020-01-04",  # first vaccine administered on the 4/1
-                "latest": latest_date,
+                "earliest": "2021-01-04",  # first vaccine administered on the 4/1
+                "latest": "2021-02-01",
             }
         },
     ),
 
-    # SECOND DOSE COVID VACCINATION, TYPE = Oxford AZ (within at least 19 d of patient's first dose of same vaccine type)
-        # NB will not pick up second doses in patients given mixed types
-    covid_vacc_oxford_second_dose_date=patients.with_tpp_vaccination_record(
+    # SECOND DOSE COVID VACCINATION, TYPE = Oxford AZ
+    covid_vax_az_2_date=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
-        on_or_after="covid_vacc_oxford_first_dose_date + 19 days",
+        on_or_after="covid_vax_az_1_date + 15 days",
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD",
         return_expectations={
             "date": {
-                "earliest": "2021-01-19",  
-                "latest": latest_date,
+                "earliest": "2021-02-01",
+                "latest": "2021-03-01",
+            }
+        },
+    ),
+
+    # THIRD DOSE COVID VACCINATION, TYPE = Oxford AZ
+    covid_vax_az_3_date=patients.with_tpp_vaccination_record(
+        product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
+        on_or_after="covid_vax_az_2_date + 1 day",
+        find_first_match_in_period=True,
+        returning="date",
+        date_format="YYYY-MM-DD",
+        return_expectations={
+            "date": {
+                "earliest": "2021-03-02",  
+                "latest": "2021-04-01",
+            }
+        },
+    ),
+    
+    # 4th DOSE COVID VACCINATION, TYPE = Oxford AZ
+    covid_vax_az_4_date=patients.with_tpp_vaccination_record(
+        product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
+        on_or_after="covid_vax_az_3_date + 1 day",
+        find_first_match_in_period=True,
+        returning="date",
+        date_format="YYYY-MM-DD",
+        return_expectations={
+            "date": {
+                "earliest": "2021-04-02",  
+                "latest": "2021-05-01",
             }
         },
     ),
 
     ################################################
-    ############ COVID CASES #########################
+    ############ PRE-STUDY COVID EVENTS ############
     ################################################
     # FIRST EVER SGSS POSITIVE
-    first_SGSS_positive_test_date=patients.with_test_result_in_sgss(
+    prior_positive_test_date=patients.with_test_result_in_sgss(
         pathogen="SARS-CoV-2",
         test_result="positive",
-        on_or_after="2020-02-01",
-        find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD",
+        on_or_before="index_date",
+        find_first_match_in_period=True,
         return_expectations={
             "date": {"earliest": "2020-02-01"},
             "rate": "exponential_increase",
         },
     ),
     # FIRST EVER PRIMARY CARE CASE IDENTIFICATION
-    earliest_primary_care_covid_case_date=patients.with_these_clinical_events(
+    prior_primary_care_covid_case_date=patients.with_these_clinical_events(
         combine_codelists(
             covid_primary_care_code,
             covid_primary_care_positive_test,
             covid_primary_care_sequalae,
         ),
         returning="date",
-        find_first_match_in_period=True,
         date_format="YYYY-MM-DD",
+        on_or_before="index_date",
+        find_first_match_in_period=True,
         return_expectations={"rate": "exponential_increase"},
     ),
-    # POST VACCINE SGSS POSITIVE    
-    post_vaccine_SGSS_positive_test_date=patients.with_test_result_in_sgss(
+    
+    prior_admitted_for_covid_date=patients.admitted_to_hospital(
+         returning="date_admitted",
+         with_these_diagnoses=covid_codes,
+         on_or_before="index_date",
+         date_format="YYYY-MM-DD",
+         find_first_match_in_period=True,
+         return_expectations={
+             "date": {"earliest": "2020-04-01", "latest" : "2020-12-01"},
+             "rate": "uniform",
+             "incidence": 0.05,
+         },
+     ),
+    
+    
+    ###################################################
+    ######## events occurring durng study period ######
+    ###################################################
+    
+    # FIRST SGSS POSITIVE DURING STUDY    
+    positive_test_1_date=patients.with_test_result_in_sgss(
         pathogen="SARS-CoV-2",
         test_result="positive",
-        on_or_after="covid_vacc_date",
+        on_or_after="index_date + 1 day",
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD",
@@ -397,8 +512,8 @@ study = StudyDefinition(
             "rate": "exponential_increase",
         },
     ),
-    # POST VACCINE PRIMARY CARE CASE IDENTIFICATION
-    post_vaccine_primary_care_covid_case_date=patients.with_these_clinical_events(
+    # FIRST PRIMARY CARE CASE IDENTIFICATION DURING STUDY    
+    primary_care_covid_case_1_date=patients.with_these_clinical_events(
         combine_codelists(
             covid_primary_care_code,
             covid_primary_care_positive_test,
@@ -407,33 +522,34 @@ study = StudyDefinition(
         returning="date",
         find_last_match_in_period=True,
         date_format="YYYY-MM-DD",
-        on_or_after="covid_vacc_date",
+        on_or_after="index_date + 1 day",
         return_expectations={
-            "date": {"earliest": "2021-05-01", "latest" : "2021-05-30"},
+            "date": {"earliest": "2021-04-01", "latest" : "2021-05-01"},
             "rate": "uniform",
             "incidence": 0.05,
         },
     ),
-    # POST VACCINE COVID-RELATED HOSPITAL ADMISSION
-    post_vaccine_admitted_date=patients.admitted_to_hospital(
+    # FIRST COVID-RELATED HOSPITAL ADMISSION DURING STUDY    
+    admitted_1_date=patients.admitted_to_hospital(
         returning="date_admitted",
         with_these_diagnoses=covid_codes,
-        on_or_after="covid_vacc_date",
+        on_or_after="index_date + 1 day",
         date_format="YYYY-MM-DD",
         find_first_match_in_period=True,
         return_expectations={
-            "date": {"earliest": "2021-05-01", "latest" : "2021-05-30"},
+            "date": {"earliest": "2021-05-01", "latest" : "2021-06-01"},
             "rate": "uniform",
             "incidence": 0.05,
         },
     ),
+
     # COVID-RELATED DEATH
     coviddeath_date=patients.with_these_codes_on_death_certificate(
         covid_codes,
         returning="date_of_death",
         date_format="YYYY-MM-DD",
         return_expectations={
-            "date": {"earliest": "2021-06-01", "latest" : "2021-06-30"},
+            "date": {"earliest": "2021-06-01", "latest" : "2021-08-01"},
             "rate": "uniform",
             "incidence": 0.02
         },
@@ -443,7 +559,7 @@ study = StudyDefinition(
         returning="date_of_death",
         date_format="YYYY-MM-DD",
         return_expectations={
-            "date": {"earliest": "2021-06-01", "latest" : "2021-06-30"},
+            "date": {"earliest": "2021-06-01", "latest" : "2021-08-01"},
             "rate": "uniform",
             "incidence": 0.02
         },
@@ -452,114 +568,112 @@ study = StudyDefinition(
     ############################################################
     ######### CLINICAL CO-MORBIDITIES ##########################
     ############################################################
-    #### NOTES: PLEASE PAY CLOSE ATTENTION TO THE DATES USED. ##
     ### THESE CODELISTS ARE AVAILABLE ON CODELISTS.OPENSAFELY.ORG
     #### AND CAN BE UPDATED. PLEASE REVIEW AND CHECK YOU ARE HAPPY
     #### WITH THE CODELIST USED #################################
 
-    # https://github.com/opensafely/vaccine-eligibility/blob/master/analysis/study_definition.py
     chronic_cardiac_disease=patients.with_these_clinical_events(
         chronic_cardiac_disease_codes,
-        on_or_before=campaign_start,
+        on_or_before="index_date",
         returning="binary_flag",
         return_expectations={"incidence": 0.01},
     ),
     current_copd=patients.with_these_clinical_events(
         current_copd_codes,
-        on_or_before=campaign_start,
+        on_or_before="index_date",
         returning="binary_flag",
         return_expectations={"incidence": 0.01, },
     ),
     # on a dmard - indicative of immunosuppression
     dmards=patients.with_these_medications(
         dmards_codes,
-        on_or_before=campaign_start,
+        on_or_before="index_date",
         returning="binary_flag",
         return_expectations={"incidence": 0.01, },
     ),
     # dementia
     dementia=patients.with_these_clinical_events(
         dementia_codes,
-        on_or_before=campaign_start,
+        on_or_before="index_date",
         returning="binary_flag",
         return_expectations={"incidence": 0.01, },
     ),
     dialysis=patients.with_these_clinical_events(
         dialysis_codes,
-        on_or_before=campaign_start,
+        on_or_before="index_date",
         returning="binary_flag",
         return_expectations={"incidence": 0.01, },
     ),
     solid_organ_transplantation=patients.with_these_clinical_events(
         solid_organ_transplantation_codes,
-        on_or_before=campaign_start,
+        on_or_before="index_date",
         returning="binary_flag",
         return_expectations={"incidence": 0.01, },
     ),
     chemo_or_radio=patients.with_these_clinical_events(
         chemotherapy_or_radiotherapy_codes,
-        on_or_before=campaign_start,
+        on_or_before="index_date",
         returning="binary_flag",
         return_expectations={"incidence": 0.01, },
     ),
     intel_dis_incl_downs_syndrome=patients.with_these_clinical_events(
         intellectual_disability_including_downs_syndrome_codes,
-        on_or_before=campaign_start,
+        on_or_before="index_date",
         returning="binary_flag",
         return_expectations={"incidence": 0.01, },
     ),
     lung_cancer=patients.with_these_clinical_events(
         lung_cancer_codes,
-        on_or_before=campaign_start,
+        on_or_before="index_date",
         returning="binary_flag",
         return_expectations={"incidence": 0.01, },
     ),
     cancer_excl_lung_and_haem=patients.with_these_clinical_events(
         cancer_excluding_lung_and_haematological_codes,
-        on_or_before=campaign_start,
+        on_or_before="index_date",
         returning="binary_flag",
         return_expectations={"incidence": 0.01, },
     ),
     haematological_cancer=patients.with_these_clinical_events(
         haematological_cancer_codes,
-        on_or_before=campaign_start,
+        on_or_before="index_date",
         returning="binary_flag",
         return_expectations={"incidence": 0.01, },
     ),
     bone_marrow_transplant=patients.with_these_clinical_events(
         bone_marrow_transplant_codes,
-        between=["2020-07-01", campaign_start],
+        between=["2020-07-01", "index_date"],
         returning="binary_flag",
         return_expectations={"incidence": 0.01, },
     ),
     cystic_fibrosis=patients.with_these_clinical_events(
         cystic_fibrosis_codes,
-        on_or_before=campaign_start,
+        on_or_before="index_date",
         returning="binary_flag",
         return_expectations={"incidence": 0.01, },
     ),
     sickle_cell_disease=patients.with_these_clinical_events(
         sickle_cell_disease_codes,
-        on_or_before=campaign_start,
+        on_or_before="index_date",
         returning="binary_flag",
         return_expectations={"incidence": 0.01, },
     ),
     permanant_immunosuppression=patients.with_these_clinical_events(
         permanent_immunosuppression_codes,
-        on_or_before=campaign_start,
+        on_or_before="index_date",
         returning="binary_flag",
         return_expectations={"incidence": 0.01, },
     ),
     temporary_immunosuppression=patients.with_these_clinical_events(
         temporary_immunosuppression_codes,
-        on_or_before=campaign_start,
+        on_or_before="index_date",
         returning="binary_flag",
         return_expectations={"incidence": 0.01, },
     ),
     #
     psychosis_schiz_bipolar=patients.with_these_clinical_events(
         psychosis_schizophrenia_bipolar_affective_disease_codes,
-        on_or_before=campaign_start,
+        on_or_before="index_date",
         returning="binary_flag",
         return_expectations={"incidence": 0.01, },
     ),
@@ -567,8 +681,10 @@ study = StudyDefinition(
     # https://github.com/opensafely/codelist-development/issues/4
     asplenia=patients.with_these_clinical_events(
         asplenia_codes,
-        on_or_before=campaign_start,
+        on_or_before="index_date",
         returning="binary_flag",
         return_expectations={"incidence": 0.01, },
     ),
+
+
 )
