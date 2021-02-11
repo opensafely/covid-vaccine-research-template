@@ -34,15 +34,11 @@ study = StudyDefinition(
         """
         registered
         AND
-        (age >= 80 AND age < 110)
+        (age >= 18 AND age < 110)
         AND
         (sex = "M" OR sex = "F")
         AND
         NOT has_died
-        AND 
-        NOT care_home
-        AND
-        NOT prior_positive_test_date
         """,
         registered=patients.registered_as_of(
             "index_date",
