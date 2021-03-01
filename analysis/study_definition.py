@@ -257,7 +257,7 @@ study = StudyDefinition(
         """care_home_type""",
         return_expectations={
             "rate": "universal",
-            "category": {"ratios": {1: 0.15, 0: 0.85, }},
+            "category": {"ratios": {"1": 0.15, "0": 0.85, }},
         },
     ),
 
