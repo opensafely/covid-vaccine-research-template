@@ -662,7 +662,7 @@ study = StudyDefinition(
     ),
     temporary_immunosuppression=patients.with_these_clinical_events(
         temporary_immunosuppression_codes,
-        on_or_before="index_date",
+        between=["2019-12-07", "index_date"],
         returning="binary_flag",
         return_expectations={"incidence": 0.01, },
     ),
