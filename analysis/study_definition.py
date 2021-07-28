@@ -326,7 +326,7 @@ study = StudyDefinition(
     # COVID VACCINATION TYPE = Pfizer BioNTech - first record of a pfizer vaccine 
        # NB *** may be patient's first COVID vaccine dose or their second if mixed types are given ***
     covid_vax_pfizer_1_date=patients.with_tpp_vaccination_record(
-        product_name_matches="COVID-19 mRNA Vac BNT162b2 30mcg/0.3ml conc for susp for inj multidose vials (Pfizer-BioNTech)",
+        product_name_matches="COVID-19 mRNA Vaccine Pfizer-BioNTech BNT162b2 30micrograms/0.3ml dose conc for susp for inj MDV",
         on_or_after="index_date",  # check all december to date
         find_first_match_in_period=True,
         returning="date",
@@ -341,7 +341,7 @@ study = StudyDefinition(
 
     # SECOND DOSE COVID VACCINATION, TYPE = Pfizer (after patient's first dose of same vaccine type)
     covid_vax_pfizer_2_date=patients.with_tpp_vaccination_record(
-        product_name_matches="COVID-19 mRNA Vac BNT162b2 30mcg/0.3ml conc for susp for inj multidose vials (Pfizer-BioNTech)",
+        product_name_matches="COVID-19 mRNA Vaccine Pfizer-BioNTech BNT162b2 30micrograms/0.3ml dose conc for susp for inj MDV",
         on_or_after="covid_vax_pfizer_1_date + 15 days",
         find_first_match_in_period=True,
         returning="date",
@@ -356,7 +356,7 @@ study = StudyDefinition(
     
     # THIRD DOSE COVID VACCINATION, TYPE = Pfizer (after patient's second dose of same vaccine type)
     covid_vax_pfizer_3_date=patients.with_tpp_vaccination_record(
-        product_name_matches="COVID-19 mRNA Vac BNT162b2 30mcg/0.3ml conc for susp for inj multidose vials (Pfizer-BioNTech)",
+        product_name_matches="COVID-19 mRNA Vaccine Pfizer-BioNTech BNT162b2 30micrograms/0.3ml dose conc for susp for inj MDV",
         on_or_after="covid_vax_pfizer_2_date + 1 day",
         find_first_match_in_period=True,
         returning="date",
@@ -371,7 +371,7 @@ study = StudyDefinition(
     
     # 4th DOSE COVID VACCINATION, TYPE = Pfizer (after patient's third dose of same vaccine type)
     covid_vax_pfizer_4_date=patients.with_tpp_vaccination_record(
-        product_name_matches="COVID-19 mRNA Vac BNT162b2 30mcg/0.3ml conc for susp for inj multidose vials (Pfizer-BioNTech)",
+        product_name_matches="COVID-19 mRNA Vaccine Pfizer-BioNTech BNT162b2 30micrograms/0.3ml dose conc for susp for inj MDV",
         on_or_after="covid_vax_pfizer_3_date + 1 day",
         find_first_match_in_period=True,
         returning="date",
