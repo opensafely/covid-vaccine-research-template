@@ -6,13 +6,12 @@ expectations:
 actions:
 
   generate_study_population:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition --output-format='dta.gz'
+    run: cohortextractor:latest generate_cohort --study-definition study_definition 
     outputs:
       highly_sensitive:
-        cohort: output/input.dta.gz
-    ### NOTE if using Stata to analyse the main input file(s) please use --output-format='dta.gz' as above, 
-    ### and open the file with 'gzuse' in Stata (http://fmwww.bc.edu/RePEc/bocode/g/gzsave.html)
-    ### else use --output-format='csv.gz' 
+        cohort: output/input.csv
+    ### NOTE the uncompressed csv format should be used if the file needs to be loaded into stata
+    ### else please set option '--output-format='csv.gz' and add '.gz' to the end of the filepath
 
   run_model:
     run: stata-mp:latest analysis/model.do
