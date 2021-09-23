@@ -6,10 +6,12 @@ expectations:
 actions:
 
   generate_study_population:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition
+    run: cohortextractor:latest generate_cohort --study-definition study_definition 
     outputs:
       highly_sensitive:
         cohort: output/input.csv
+    ### NOTE the uncompressed csv format should be used if the file needs to be loaded into stata
+    ### else please set option '--output-format='csv.gz' and add '.gz' to the end of the filepath
 
   run_model:
     run: stata-mp:latest analysis/model.do
