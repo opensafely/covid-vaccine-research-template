@@ -1,3 +1,3 @@
 log using logs/model.log
-gzuse output/input.dta.gz
+import delimited output/input.csv
 log close
